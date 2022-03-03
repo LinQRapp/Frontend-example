@@ -1,0 +1,120 @@
+<html>
+
+<head>
+    <style>
+        .boldtext {
+            font-weight: bold;
+        }
+
+        #codePlaceholder {
+            width: 300px;
+            height: 300px;
+        }
+    </style>
+    <script type="text/javascript">
+        function setRemaining(r) {
+            document.getElementById('remaining').textContent = r || 'unknown';
+        }
+        function getQRObject(data, format) {
+            return {
+                data,
+                image: {
+                    uri: "icon://appstore",
+                    modules: true
+                },
+                style: {
+                    module: {
+                        color: "black",
+                        shape: "default"
+                    },
+                    inner_eye: { shape: "default" },
+                    outer_eye: { shape: "default" },
+                    background: { color: "white" }
+                },
+                size: { width: 300 },
+                output: { format }
+            };
+        }
+        function generateQRCode() {
+            /** 
+             * Never expose your API key to the public
+             */
+
+            const API_KEY = 'API_KEY';
+
+            const insertType = document.getElementById('insertType').value;
+            const format = document.getElementById('codeFormat').value;
+            const data = document.getElementById('codeData').value || 'https://linqr.app';
+
+            if (insertType === 'html' && format !== 'svg') {
+                alert('Only SVGs can be inserted as raw html :(');
+                return;
+            }
+
+            fetch("https://qrcode3.p.rapidapi.com/qrcode/text", {
+                "method": "POST",
+                "headers": {
+                    "content-type": "application/json",
+                    "x-rapidapi-key": API_KEY
+                },
+                "body": JSON.stringify(getQRObject(data, format))
+            })
+                .then(response => {
+                    const insertionPoint = document.getElementById('codePlaceholder');
+                    switch (insertType) {
+                        case 'html':
+                            response.text().then(text => insertionPoint.innerHTML = text);
+                            break;
+
+                        case 'img':
+                            response.blob().then(blob => {
+                                const reader = new FileReader();
+                                reader.readAsDataURL(blob);
+                                reader.onloadend = () => {
+                                    const img = document.createElement('img');
+                                    img.src = reader.result;
+                                    insertionPoint.replaceChildren(img);
+                                };
+                            });
+                            break;
+
+                        default:
+                            break;
+                    }
+                    setRemaining(response.headers.get('x-ratelimit-qr-codes-remaining'));
+                })
+                .catch(err => {
+                    console.error(err);
+                });
+        }
+    </script>
+</head>
+
+<body>
+    <div style="background-color: #00947e;">
+        <div class="boldtext"><a href="https://linqr.app/">LinQR</a> demo</div><br>
+        <label for="codeData">QRCode data:</label>
+        <input type="text" id="codeData" name="codeData">
+        <label for="codeFormat">Format</label>
+        <select name="codeFormat" id="codeFormat">
+            <option>png</option>
+            <option>svg</option>
+        </select>
+        <label for="insertType">How to insert?</label>
+        <select name="insertType" id="insertType">
+            <option value="img">img+base64</option>
+            <option value="html">raw html (svg only)</option>
+        </select>
+        <input type="button" onclick="generateQRCode()" value="Generate">
+        <div class="boldtext">
+            Preview
+        </div>
+        <div id="codePlaceholder">
+            <div>Generate me first!</div>
+        </div>
+        <div>
+            Remaining QR Codes in subscription: <span id="remaining" class="boldtext">unknown</span>
+        </div>
+</body>
+
+</html>
