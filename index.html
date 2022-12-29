@@ -6,6 +6,10 @@
             font-weight: bold;
         }
 
+        .normaltext {
+            font-weight: normal;
+        }
+
         #codePlaceholder {
             width: 300px;
             height: 300px;
@@ -14,6 +18,9 @@
     <script type="text/javascript">
         function setRemaining(r) {
             document.getElementById('remaining').textContent = r || 'unknown';
+        }
+        function setSnippet() {
+            document.getElementById('codeSnippet').innerText = document.getElementById('codePlaceholder').innerHTML;
         }
         function getQRObject(data, format) {
             return {
@@ -40,7 +47,7 @@
              * Never expose your API key to the public
              */
 
-            const API_KEY = 'API_KEY';
+            const API_KEY = document.getElementById('apiKey').value;
 
             const insertType = document.getElementById('insertType').value;
             const format = document.getElementById('codeFormat').value;
@@ -60,12 +67,17 @@
                 "body": JSON.stringify(getQRObject(data, format))
             })
                 .then(response => {
+                    if (response.status >= 400) {
+                        response.text().then(text => alert('API Error:\n\n' + text));
+                        return;
+                    }
                     const insertionPoint = document.getElementById('codePlaceholder');
                     switch (insertType) {
                         case 'html':
-                            response.text().then(text => insertionPoint.innerHTML = text);
+                            response.text().then(text => {
+                                insertionPoint.innerHTML = text; setSnippet();
+                            });
                             break;
-
                         case 'img':
                             response.blob().then(blob => {
                                 const reader = new FileReader();
@@ -74,10 +86,10 @@
                                     const img = document.createElement('img');
                                     img.src = reader.result;
                                     insertionPoint.replaceChildren(img);
+                                    setSnippet();
                                 };
                             });
                             break;
-
                         default:
                             break;
                     }
@@ -93,6 +105,8 @@
 <body>
     <div style="background-color: #00947e;">
         <div class="boldtext"><a href="https://linqr.app/">LinQR</a> demo</div><br>
+        <label for="apiKey">API Key:</label>
+        <input type="text" id="apiKey" name="apiKey">
         <label for="codeData">QRCode data:</label>
         <input type="text" id="codeData" name="codeData">
         <label for="codeFormat">Format</label>
@@ -112,8 +126,14 @@
         <div id="codePlaceholder">
             <div>Generate me first!</div>
         </div>
-        <div>
-            Remaining QR Codes in subscription: <span id="remaining" class="boldtext">unknown</span>
+        <div class="boldtext">
+            Remaining QR Codes in subscription: <span id="remaining" class="normaltext">unknown</span>
+        </div>
+        <div class="boldtext">
+            Code Snippet:
+            <code id="codeSnippet">
+                unknown
+            </code>
         </div>
 </body>
 
